@@ -80,3 +80,68 @@ pre-computed HOG features a "training_data" folder. Notice that the info_images.
 has only the "filename" column with data. It's up to you to complete the other columns 
 with information specific to the pictures you use (however, you don't need to do it to 
 make the API work).</p>
+
+<h3>Deployment</h3>
+
+<p>I have designed a way do deploy this project on AWS. That also concerns changes on the 
+data layer. <strong>These modifications can be found on the Git branch aws</strong>. 
+The deployment process concerns:</p>
+
+<ul>
+    <li>The deployment process is done using AWS Elastic Beanstalk.</li>
+    <li>Instead of storing images on a folder in the project, AWS S3 was used.</li>
+    <li>
+        Instead of storing image related data in a CSV file in the project structure, AWS
+        DynamoDB was used.
+    </li>
+</ul>
+
+<p>I advise you to proceed with the deployment process described here only if you are 
+familiar with AWS, otherwise you will not understand the employed vocabulary.</p>
+
+<p>I used the default Elastic Beanstalk environment settings, except for the number of
+instances of the Auto Scaling Group, which ranges from 1 to 2 instances according to 
+the load. Besides, the health check is performed using a new endpoint "/health". The 
+instances are considered healthy when this endpoint returns a 204 status code.</p>
+
+<p>To deploy the project on your AWS account, you'll need to install the AWS CLI and 
+configure it on your computer. This is a very standard process when using AWS, and you
+can follow <a target="_blank" href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html">the AWS official guide</a>.
+After the installation, you will need to store your AWS credentials to be able to 
+access your AWS account from the CLI. You can find ways to do so <a target="_blank" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html">on the AWS docs</a>.</p>
+
+<p>Then, you will need to install the EB CLI (Elastic Beanstalk
+CLI), which is a way to automate Elastic Beanstalk deployments. I followed 
+<a target="_blank" href="https://github.com/aws/aws-elastic-beanstalk-cli-setup">the guide available on the official AWS Git Repository</a>.</p>
+
+<p>Switch to the Git branch <strong>aws</strong>, and tun the script 
+<strong>send_data_to_aws.py</strong> to send image related data to AWS DynamoDB. 
+DynamoDB is a serverless NoSQL database from AWS, which will be used by the Flask 
+application as data source. In addition, upload the image folder to AWS S3 on the 
+AWS console. S3 is a storage service for files in general.</p>
+
+<p>Finally, you must run some EB CLI commands to create an Elastic Beanstalk application, 
+set up a deployment environment, and deploy the project:</p>
+
+<ul>
+    <li>
+        Run <strong>eb init</strong> to create an Elastic Beanstalk application. You will
+        be prompted to provide some configuration information. The unique question that actually
+        matters is the application platform, which should be Python.
+    </li>
+    <li>
+        Run <strong>eb create -ip {role_name}</strong> to create a deployment environment.
+        <strong>role_name</strong> should be replaced with the name of an AWS role that you 
+        need to grant to your EC2 instances to let they make requests to other AWS services 
+        (S3 and DynamoDB). This role should be attached to the following AWS managed policies: 
+        AmazonDynamoDBReadOnlyAccess, AmazonS3ReadOnlyAccess, AWSElasticBeanstalkMulticontainerDocker, 
+        AWSElasticBeanstalkWebTier, AWSElasticBeanstalkWorkerTier.
+    </li>
+    <li>
+        Run <strong>eb deploy --staged</strong> to deploy your project. 
+    </li>
+</ul>
+
+<p>Keep in mind that there are AWS costs associated with the Elastic Beanstalk deployment.
+So if you are done with it, run the command <strong>eb terminate {environment-name}</strong>
+to terminate the deployment environment.</p>

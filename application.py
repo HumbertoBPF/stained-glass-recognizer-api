@@ -2,10 +2,10 @@ from flask import Flask, request
 
 from classif import recognize_stained_glass
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 
-@app.route("/classify", methods=["POST"])
+@application.route("/classify", methods=["POST"])
 def classify():
     try:
         image = request.files["image"]
@@ -17,4 +17,10 @@ def classify():
     return stained_glass_data, 200
 
 
-app.run()
+@application.route("/health", methods=["GET",])
+def health():
+    return '', 204
+
+
+if __name__ == "__main__":
+    application.run()

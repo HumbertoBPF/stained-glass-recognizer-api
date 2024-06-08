@@ -1,0 +1,18 @@
+Resources:
+  StainedGlassImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "name"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "name"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: stained-glass-images
+  StainedGlassImagesBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: stained-glass-images

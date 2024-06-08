@@ -1,7 +1,7 @@
 db_data/*
-training_data/*
 .idea/*
 __pycache__/*
+venv/*
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml

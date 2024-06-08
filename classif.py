@@ -1,36 +1,28 @@
 import base64
-import csv
 import shelve
 
+import boto3
 import cv2
 import numpy as np
 from skimage.feature import hog
 from sklearn.neighbors import KNeighborsClassifier
 
 
-def get_training_data():
+def get_training_data(my_shelf):
     x = []
-
-    my_shelf = shelve.open("training_data/HOG_training_data_all.out")
 
     for key in my_shelf:
         data = my_shelf[key]
         x.append(data)
 
-    my_shelf.close()
-
     return np.array(x)
 
 
-def get_image_labels():
+def get_image_labels(my_shelf):
     y_labels = []
-
-    my_shelf = shelve.open("training_data/HOG_training_data_all.out")
 
     for key in my_shelf:
         y_labels.append(key)
-
-    my_shelf.close()
 
     return np.array(y_labels)
 
@@ -70,30 +62,48 @@ def encode_image_in_base64(filename):
 
 
 def get_image_details(filename):
-    with open('db_data/info_images.csv', mode='r') as csv_file:
-        csv_reader = csv.DictReader(csv_file)
-        for row in csv_reader:
-            if row["filename"] == filename:
-                return {
-                    "filename": row["filename"],
-                    "image": encode_image_in_base64(f"db_data/images/{filename}"),
-                    "artist": row["artist"],
-                    "year_birth": row["year of birth"],
-                    "year_passing": row["year of passing"],
-                    "artist_reference": row["artist reference"],
-                    "glass_date": row["glass date"],
-                    "date_reference": row["date reference"],
-                    "iconography": row["iconography"],
-                    "church_name": row["church name"],
-                    "url": row["url"]
-                }
+    client_dynamodb = boto3.client('dynamodb', region_name='us-east-1')
 
-    return {}
+    response = client_dynamodb.get_item(
+        Key={
+            'name': {
+                'S': filename,
+            },
+        },
+        TableName='stained-glass-images',
+    )
+
+    item = response.get("Item", {})
+
+    client_s3 = boto3.client('s3', region_name='us-east-1')
+
+    output_image = client_s3.get_object(
+        Bucket='stained-glass-images',
+        Key=item["name"]["S"],
+    )
+
+    return {
+        "filename": item["name"]["S"],
+        "image": base64.b64encode(output_image["Body"].read()).decode(),
+        "artist": item["artist"]["S"],
+        "year_birth": item["year_birth"]["S"],
+        "year_passing": item["year_passing"]["S"],
+        "artist_reference": item["artist_reference"]["S"],
+        "glass_date": item["glass_date"]["S"],
+        "date_reference": item["date_reference"]["S"],
+        "iconography": item["iconography"]["S"],
+        "church_name": item["church_name"]["S"],
+        "url": item["url"]["S"]
+    }
 
 
 def recognize_stained_glass(input_image):
-    x = get_training_data()
-    y_labels = get_image_labels()
+    my_shelf = shelve.open("training_data/HOG_training_data_all.out")
+
+    x = get_training_data(my_shelf)
+    y_labels = get_image_labels(my_shelf)
+
+    my_shelf.close()
 
     classifier = KNeighborsClassifier(n_neighbors=1)
     classifier.fit(x, y_labels)
